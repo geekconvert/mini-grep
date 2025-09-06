@@ -12,35 +12,60 @@ std::string string_to_lower(std::string str)
     return str;
 }
 
-// Searches for the searchString in all regular files within the given directory
+// Searches for the searchString in all regular files within the given directory or a single file
 void search_files(std::string searchString, std::string searchPath, bool ignorecase){
     std::ifstream input_file;
     std::string line;
     std::string search_line;
 
-    // Iterate over all files in the directory
-    for(const auto &file : std::filesystem::directory_iterator(searchPath)){
-        if(file.is_regular_file()){
-            input_file.open(file.path());
-            if(input_file){
-                // Read each line from the file
-                while(std::getline(input_file, line)){
-                    if(ignorecase){
-                        search_line = string_to_lower(line);
-                    }else{
-                        search_line = line;
+    std::filesystem::path path(searchPath);
+    if (std::filesystem::is_directory(path)) {
+        // Iterate over all files in the directory
+        for(const auto &file : std::filesystem::directory_iterator(searchPath)){
+            if(file.is_regular_file()){
+                input_file.open(file.path());
+                if(input_file){
+                    // Read each line from the file
+                    while(std::getline(input_file, line)){
+                        if(ignorecase){
+                            search_line = string_to_lower(line);
+                        }else{
+                            search_line = line;
+                        }
+                        // Print the line if searchString is found
+                        if(search_line.find(searchString) != std::string::npos){
+                            std::cout << line << std::endl;
+                        }
                     }
-                    // Print the line if searchString is found
-                    if(search_line.find(searchString) != std::string::npos){
-                        std::cout << line << std::endl;
-                    }
+                    input_file.close();
+                }else{
+                    std::cerr << "Error opening file: " << file.path() << std::endl;
                 }
                 input_file.close();
-            }else{
-                std::cerr << "Error opening file: " << file.path() << std::endl;
+            }
+        }
+    } else if (std::filesystem::is_regular_file(path)) {
+        // Search in a single file
+        input_file.open(searchPath);
+        if(input_file){
+            // Read each line from the file
+            while(std::getline(input_file, line)){
+                if(ignorecase){
+                    search_line = string_to_lower(line);
+                }else{
+                    search_line = line;
+                }
+                // Print the line if searchString is found
+                if(search_line.find(searchString) != std::string::npos){
+                    std::cout << line << std::endl;
+                }
             }
             input_file.close();
+        }else{
+            std::cerr << "Error opening file: " << searchPath << std::endl;
         }
+    } else {
+        std::cerr << "Error: " << searchPath << " is not a valid file or directory." << std::endl;
     }
 }
 
