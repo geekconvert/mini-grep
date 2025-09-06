@@ -13,10 +13,11 @@ std::string string_to_lower(std::string str)
 }
 
 // Searches for the searchString in all regular files within the given directory or a single file
-void search_files(std::string searchString, std::string searchPath, bool ignorecase){
+void search_files(std::string searchString, std::string searchPath, bool ignorecase, bool countOnly){
     std::ifstream input_file;
     std::string line;
     std::string search_line;
+    int match_count = 0;
 
     std::filesystem::path path(searchPath);
     if (std::filesystem::is_directory(path)) {
@@ -34,7 +35,10 @@ void search_files(std::string searchString, std::string searchPath, bool ignorec
                         }
                         // Print the line if searchString is found
                         if(search_line.find(searchString) != std::string::npos){
-                            std::cout << line << std::endl;
+                            match_count++;
+                            if(!countOnly){
+                                std::cout << line << std::endl;
+                            }
                         }
                     }
                     input_file.close();
@@ -57,7 +61,10 @@ void search_files(std::string searchString, std::string searchPath, bool ignorec
                 }
                 // Print the line if searchString is found
                 if(search_line.find(searchString) != std::string::npos){
-                    std::cout << line << std::endl;
+                    match_count++;
+                    if(!countOnly){
+                        std::cout << line << std::endl;
+                    }
                 }
             }
             input_file.close();
@@ -67,13 +74,16 @@ void search_files(std::string searchString, std::string searchPath, bool ignorec
     } else {
         std::cerr << "Error: " << searchPath << " is not a valid file or directory." << std::endl;
     }
+    if(countOnly){
+        std::cout << match_count << std::endl;
+    }
 }
 
 // Searches for the searchString in standard input (for piped input)
-void search_output(std::string searchString, bool ignorecase){
+void search_output(std::string searchString, bool ignorecase, bool countOnly){
     std::string input_line;
     std::string search_line;
-
+    int match_count = 0;
     // Read each line from stdin
     while(std::cin){
         getline(std::cin, input_line);
@@ -84,8 +94,14 @@ void search_output(std::string searchString, bool ignorecase){
         }
         // Print the line if searchString is found
         if(search_line.find(searchString) != std::string::npos){
-            std::cout << input_line << std::endl;
+            match_count++;
+            if(!countOnly){
+                std::cout << input_line << std::endl;
+            }
         }
+    }
+    if(countOnly){
+        std::cout << match_count << std::endl;
     }
 }
 
@@ -93,33 +109,39 @@ void search_output(std::string searchString, bool ignorecase){
 int main(int argc, char** argv)
 {
     bool ignorecase = false;
+    bool countOnly = false;
     std::string searchstring;
     std::string searchpath;
     int valid_arg_count = 2;
 
-    // Check if -i flag is present for case-insensitive search
-    if(std::string("-i").find(argv[1]) != std::string::npos){
-        ignorecase = true;
-        searchstring = argv[2];
-        valid_arg_count++;
-    }else{
-        searchstring = argv[1];
+    // Parse flags in any order
+    int arg_index = 1;
+    while (arg_index < argc && std::string(argv[arg_index]).rfind("-", 0) == 0) {
+        if (std::string(argv[arg_index]) == "-i") {
+            ignorecase = true;
+            valid_arg_count++;
+        } else if (std::string(argv[arg_index]) == "-c") {
+            countOnly = true;
+            valid_arg_count++;
+        }
+        arg_index++;
+    }
+    if(argc > arg_index){
+        searchstring = argv[arg_index];
+        arg_index++;
     }
 
     // If input is piped, search in stdin
     if(!isatty(fileno(stdin))){
-        search_output(searchstring, ignorecase);
+        search_output(searchstring, ignorecase, countOnly);
     } else if(argc >= valid_arg_count){
-        // Otherwise, search in files in the given directory
-        if(ignorecase){
-            searchpath = argv[3];
-        } else {
-            searchpath = argv[2];
+        if(argc > arg_index){
+            searchpath = argv[arg_index];
         }
-        search_files(searchstring, searchpath, ignorecase);
+        search_files(searchstring, searchpath, ignorecase, countOnly);
     } else {
         // Print usage if arguments are insufficient
-        std::cout << "Usage: grep <search string> [search path]" << std::endl;
+        std::cout << "Usage: grep [-i] [-c] <search string> [search path]" << std::endl;
     }
     return 0;
 }
