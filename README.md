@@ -18,3 +18,11 @@ cat testfiles/test2.txt | ./minigrep "mary"
 ```
 ./minigrep "stuff" testfiles/test2.txt
 ```
+
+```
+./minigrep -c -i "stuff" testfiles/test2.txt
+```
+
+```
+./minigrep -i -c "stuff" testfiles/test2.txt
+```
